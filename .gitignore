@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.venv_mujoco/
+logs/*.csv
+logs/*.json
+logs/*.npz
+Log/
+.pytest_cache/

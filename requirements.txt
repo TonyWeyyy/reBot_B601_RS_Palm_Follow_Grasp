@@ -1,0 +1,14 @@
+# 主控制环境依赖（Python 3.10+）
+# 推荐通过 ./tools/setup_env.sh 或：
+#   pip install --find-links third_party/wheels -r requirements.txt
+# 注意：pip 安装 Pinocchio 的官方 PyPI 包名为 `pin`（若使用 conda-forge 则安装 `pinocchio`）。
+
+numpy>=1.24
+pyyaml>=6.0
+opencv-contrib-python>=4.8
+mediapipe>=0.10.14
+pyorbbecsdk2>=2.0
+pin>=3.0
+motorbridge>=0.5
+pynput>=1.7
+scipy>=1.10

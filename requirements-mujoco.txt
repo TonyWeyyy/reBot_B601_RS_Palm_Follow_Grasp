@@ -1,0 +1,5 @@
+# MuJoCo Studio 4.0+ 3D 数字孪生独立环境依赖（需要 Python >= 3.11，推荐 3.12）
+# 推荐通过 ./tools/setup_env.sh 自动创建项目内 .venv_mujoco/ 环境。
+
+mujoco>=4.0.1
+numpy>=1.24

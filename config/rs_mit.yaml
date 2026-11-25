@@ -1,0 +1,124 @@
+# ==============================================================================
+# reBot Arm B601-RS 底层硬件与 MIT 扩展配置文件（config/rs_mit.yaml）
+# ==============================================================================
+# 机械臂型号：Seeed reBot Arm B601-RS（RobStride RS06 x3 + RS00 x4）
+# 通信方式  ：SocketCAN（默认 can0 @ 1Mbps，host_id=0xFD）
+# 主控制模式：200Hz MIT 阻抗控制（内置实机验收定稿 P0~P4 全套能力）
+#
+# 一键回退 / 分阶段调试开关（重启生效）：
+#   - mit_ext.supervisor_enable: false  → 关闭 M6 主动安全监督（保留三级过温与 CAN 容错）
+#   - mit_ext.gain_sched_enable: false  → 退回固定基线 kd
+#   - mit_ext.gravity_ff_enable: false  → 关闭静态重力前馈（tau_ff = 0）
+#   - mit_ext.vel_ff_enable: false      → 退回 P0 纯位置 MIT（dq_des = 0）
+# ==============================================================================
+
+hardware:
+  name: "reBot_B601_RS"
+  channel: "can0"                 # SocketCAN 接口名
+  host_id: 0xFD                   # RobStride 主机 ID
+  control_hz: 200.0               # 底层实时控制线程频率 (Hz)
+  telemetry_hz: 2.0               # 温度监控线程频率 (Hz)
+
+  # 安全停机 / Esc / Ctrl+C 缓慢回零配置
+  return_zero:
+    max_speed_deg_s: 30.0         # 普通回零 smoothstep 峰值速度 (°/s)
+    thermal_max_speed_deg_s: 30.0 # 高温触发回零峰值速度 (°/s)
+    min_time_s: 3.0               # 最短回零时长 (s)
+    settle_time_s: 0.30           # 到达零位后保持时长 (s)
+
+  # 三级过温保护阈值（°C，基于 RobStride MOS 温度，必须满足 alarm < return_zero < disconnect）
+  temperatures:
+    alarm_c: 110.0                # 一级：打印报警，继续运行
+    return_zero_c: 125.0          # 二级：停止运动并缓慢安全回零后失能
+    disconnect_c: 140.0           # 三级：立即紧急失能断开（不再回零）
+
+  # 7 路 RobStride 电机配置（J1~J3: RS06, J4~J6 & J7 夹爪: RS00）
+  motors:
+    - name: joint1
+      motor_id: 1
+      model: "rs-06"
+      kp: 72.0
+      kd: 3.6
+    - name: joint2
+      motor_id: 2
+      model: "rs-06"
+      kp: 216.0
+      kd: 12.0
+    - name: joint3
+      motor_id: 3
+      model: "rs-06"
+      kp: 216.0
+      kd: 12.0
+    - name: joint4
+      motor_id: 4
+      model: "rs-00"
+      kp: 50.0
+      kd: 5.0
+    - name: joint5
+      motor_id: 5
+      model: "rs-00"
+      kp: 50.0
+      kd: 4.0
+    - name: joint6
+      motor_id: 6
+      model: "rs-00"
+      kp: 50.0
+      kd: 4.0
+    - name: gripper
+      motor_id: 7
+      model: "rs-00"
+      kp: 50.0
+      kd: 4.0
+
+mit_ext:
+  enable: true
+
+  # P0 · S1：CAN 瞬时故障容错（绝不单帧丢包半空失能）
+  can_fault_window_s: 0.03        # 连续发送失败 ≥30ms（200Hz 下 6 拍）才判定通信故障 [0.01, 0.10]
+  can_fault_action: return_to_zero  # return_to_zero=缓慢回零后失能 | emergency=立即失能
+  can_error_log_interval_s: 1.0   # 瞬时异常打印限频 (s)
+
+  # P0 · 200Hz 零额外 CAN 开销真实反馈缓存（motor.get_state()）
+  feedback_cache: true
+  feedback_poll_once: false       # 实机已验证 motorbridge 后台线程自动 100% 刷新
+  feedback_trusted: true          # 已由 mit_feedback_probe.py 实测验证（最大偏差 0.014°）
+  feedback_max_age_s: 0.05        # 缓存过期阈值 (s)
+  record_max_s: 30.0              # 单次 200Hz 录波最长时长 (s)
+
+  # P1：MIT 速度前馈 dq_des + 200Hz FOH 一阶保持连续插值 + 40ms 看门狗衰减
+  vel_ff_enable: true
+  vel_ff_scale: [0.70, 0.85, 0.85, 0.90, 0.90, 0.90]
+  foh_interp_enable: true
+  foh_upper_dt_s: 0.010
+  vel_ff_watchdog_s: 0.040
+  vel_ff_watchdog_tau_s: 0.030
+  vel_ff_lpf_tau_s: 0.008
+
+  # P3 M2：Pinocchio + 末端 Gemini 2 相机质点静态重力补偿 tau_ff（实机标定定稿）
+  gravity_ff_enable: true
+  gravity_ff_scale: [0.0, 0.65, 0.80, 0.80, 0.0, 0.0]
+  gravity_ff_max_nm: [0.0, 12.0, 12.0, 2.5, 2.0, 1.0]
+  gravity_payload_mass_kg: 0.32   # 腕部外挂 Gemini 2 相机 + 支架等效质量
+  gravity_payload_com_link6_m: [0.056, -0.011, 0.095]  # 质心在 link6 局部系坐标
+  gravity_ff_ramp_in_s: 0.50
+  gravity_ff_slew_nm_s: 30.0
+
+  # P3 M3：伸展度自适应阻尼调度（按水平伸展半径 r 平滑调度 J1~J3 kd）
+  gain_sched_enable: true
+  gain_sched_r_min_m: 0.18
+  gain_sched_r_max_m: 0.36
+  gain_sched_kd_near: [4.6, 13.5, 14.0, 5.0, 4.0, 4.0]
+  gain_sched_kd_far:  [6.4, 14.5, 15.0, 5.0, 4.0, 4.0]
+  gain_sched_kp_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  gain_sched_slew_per_s: 10.0
+
+  # P4 M6：200Hz 主动安全监督层（碰撞/堵转软保持 + 90~110°C 线性热降额，绝不半空失能）
+  supervisor_enable: true
+  track_err_limit_deg: 12.0
+  track_err_window_s: 0.08
+  # RS06 峰值 36Nm（限 28Nm）、RS00 峰值 14Nm（限 10Nm）
+  tau_limit_nm: [18.0, 28.0, 28.0, 10.0, 10.0, 10.0]
+  tau_limit_window_s: 0.08
+  thermal_derate_start_c: 90.0
+  thermal_derate_full_c: 110.0
+  thermal_derate_min_scale: 0.40
