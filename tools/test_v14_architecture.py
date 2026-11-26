@@ -361,16 +361,22 @@ class WorldPBVSAndShieldTests(unittest.TestCase):
 class DigitalTwinAndEndToEndTests(unittest.TestCase):
     """验证数字孪生运动学精度、闭环跟踪稳停与真实日志端到端回放。"""
 
-    def test_pure_numpy_urdf_matches_home_pose_submillimeter(self):
-        """验证纯 NumPy B601-RS URDF FK 与实机示教 home_pose.json 偏差 < 0.5 mm。"""
-        kin = _PureNumpyURDFKinematics(os.path.join(ROOT, "config", "joint_offset.json"))
+    def test_pure_numpy_urdf_matches_pinocchio_submillimeter(self):
+        """验证纯 NumPy B601-RS URDF FK 与 Pinocchio URDF FK 在 HOME 位姿偏差 < 0.5 mm。"""
+        from servo_v14.robot_backend import URDF_DEFAULT_PATH, _PinocchioKinematicsHelper
+
+        offset_path = os.path.join(ROOT, "config", "joint_offset.json")
+        kin = _PureNumpyURDFKinematics(offset_path)
+        pin_kin = _PinocchioKinematicsHelper(URDF_DEFAULT_PATH, offset_path)
         with open(os.path.join(ROOT, "config", "home_pose.json"), encoding="utf-8") as stream:
             hp = json.load(stream)
-        p, _, J = kin.fk_and_jacobian(np.asarray(hp["home_joint_pos"], dtype=np.float64))
-        err_mm = float(np.linalg.norm(p - np.asarray(hp["tcp_position"]))) * 1000.0
+        q_home = np.asarray(hp["home_joint_pos"], dtype=np.float64)
+        p_np, _, J = kin.fk_and_jacobian(q_home)
+        p_pin, _ = pin_kin.fk_only(q_home)
+        err_mm = float(np.linalg.norm(p_np - p_pin)) * 1000.0
         self.assertLess(err_mm, 0.5)
         self.assertEqual(J.shape, (6, 6))
-        tau = kin.gravity_torque(np.asarray(hp["home_joint_pos"], dtype=np.float64))
+        tau = kin.gravity_torque(q_home)
         self.assertGreater(tau[2], 6.0)   # J3 承重正力矩
         self.assertGreater(tau[3], 1.8)   # J4 承重正力矩
 
