@@ -10,7 +10,7 @@ r"""
    - 提供线程安全 FK/雅可比计算与 200Hz 实测状态快照读取。
 
 2. `DigitalTwinBackend`（v14 支柱三：离线数字孪生）：
-   - 优先加载真实 B601-RS URDF + Pinocchio（含 `config/joint_offset.json` 与 `0.32 kg` Gemini 2 负载），
+   - 优先加载真实 B601-RS URDF + Pinocchio（含 `config/joint_offset.json` 与 `0.095 kg` Gemini 305 + 相机壳 3.0 负载），
      在无 Pinocchio/URDF 的纯单测环境下自动退回解析运动学替身；
    - 内置 200Hz 辨识动力学积分器（参数来自 B601-RS P0~P3 实机扫频与重力标定）：
      - 完整仿真 MIT 五元组 $\tau = k_p(q_{\text{cmd}} - q) + k_d(r)(\dot{q}_{\text{ff}} - \dot{q}) + \tau_{\text{ff}} - b\dot{q} - g(q)$；
@@ -249,7 +249,7 @@ class HardwareRobotBackend:
 
 
 class _PinocchioKinematicsHelper:
-    """加载真实 B601-RS URDF + Pinocchio（含关节零位偏置与 0.32kg 相机质点重力模型）。"""
+    """加载真实 B601-RS URDF + Pinocchio（含关节零位偏置与 0.095kg Gemini 305 + 相机壳 3.0 质点重力模型）。"""
 
     def __init__(self, urdf_path: str, joint_offset_path: Optional[str] = None) -> None:
         import pinocchio as pin
@@ -258,12 +258,12 @@ class _PinocchioKinematicsHelper:
         self.model = pin.buildModelFromUrdf(urdf_path)
         self.data = self.model.createData()
         self.grav_model = pin.buildModelFromUrdf(urdf_path)
-        # 在 link6 挂入 0.32kg Gemini 2 相机质点，与真实硬件一致
+        # 在 link6 挂入 0.095kg Gemini 305 (68g) + 相机壳3.0 (27g) 质点，与真实硬件一致
         try:
             jid = self.grav_model.getJointId("joint6")
             if 0 < jid < self.grav_model.njoints:
-                com = np.array([0.056, -0.011, 0.095], dtype=np.float64)
-                inertia = pin.Inertia(0.32, com, np.eye(3, dtype=np.float64) * 1e-4)
+                com = np.array([0.055, 0.000, 0.075], dtype=np.float64)
+                inertia = pin.Inertia(0.095, com, np.eye(3, dtype=np.float64) * 1e-4)
                 self.grav_model.appendBodyToJoint(jid, inertia, pin.SE3.Identity())
         except Exception:
             pass
@@ -355,7 +355,7 @@ class _PureNumpyURDFKinematics:
     与 B601-RS `ReBot_Arm_RS.urdf` 逐参数精确一致的纯 NumPy 运动学/雅可比/静重力引擎。
 
     无需 Pinocchio 即可在任意 Python 环境下提供亚毫米级一致的 FK、LOCAL_WORLD_ALIGNED
-    几何雅可比与含末端夹爪 + 0.32kg Gemini 2 相机的广义重力矩 `g(q)`。
+    几何雅可比与含末端夹爪 + 0.095kg Gemini 305 相机的广义重力矩 `g(q)`。
     """
 
     # 直接摘自 ReBot_Arm_RS.urdf 的 6 关节运动链定义：(xyz, rpy, axis, lower, upper)
@@ -368,7 +368,7 @@ class _PureNumpyURDFKinematics:
         ((0.0365, 0.0, 0.048), (0.0, 1.5708, 0.0), (0.0, 0.0, -1.0), -3.14, 3.14),
     )
 
-    # 各连杆 (mass_kg, com_local_m) — 含 URDF link1~link6、固定夹爪与 0.32kg Gemini 2 相机质点
+    # 各连杆 (mass_kg, com_local_m) — 含 URDF link1~link6、固定夹爪与 0.095kg Gemini 305 + 相机壳 3.0 质点
     _LINK_BODIES = (
         (0, 0.4655, (0.00818, 0.00123, 0.03314)),          # link1
         (1, 1.5520, (-0.11786, -0.00342, -0.02716)),       # link2
@@ -378,8 +378,8 @@ class _PureNumpyURDFKinematics:
         (5, 0.1000, (0.00002, 0.00000, 0.00435)),          # link6
         # gripper_end（固定于 link6 [0,0,0.16621], rpy=[3.1416,-1.5708,0]）+ 左右爪合并等效到 link6 系
         (5, 0.8004, (0.00000, -0.00013, 0.05346)),
-        # 外挂 Gemini 2 相机 + 支架等效质点（P0/P3 实机反推 0.32kg）
-        (5, 0.3200, (0.05600, -0.01100, 0.09500)),
+        # 外挂 Gemini 305 (68g) + 相机壳3.0 (~27g) 等效质点
+        (5, 0.0950, (0.05500, 0.00000, 0.07500)),
     )
 
     def __init__(self, joint_offset_path: Optional[str] = None) -> None:

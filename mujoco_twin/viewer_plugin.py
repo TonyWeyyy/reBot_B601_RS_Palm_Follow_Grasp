@@ -301,7 +301,7 @@ class ViewerPlugin(plugin.ViewerPlugin):
         )
         changed |= c3
         imgui.SameLine()
-        c4, self.show_camera_ray = imgui.Checkbox("Camera 0.40m Ray##ShowRay", self.show_camera_ray)
+        c4, self.show_camera_ray = imgui.Checkbox("Camera 0.35m Ray##ShowRay", self.show_camera_ray)
         changed |= c4
         if changed:
             self._send_display()

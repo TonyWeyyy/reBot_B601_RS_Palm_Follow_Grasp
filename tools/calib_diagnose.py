@@ -39,7 +39,7 @@ import cv2
 # 项目根目录（tools/ 的上一级）加入模块搜索路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 from rebot_adapter import RebotAdapter
 from hand_eye_calibration_auto import (
     ArucoTracker, get_tcp_matrix, VIEWPOINT_FILE, MOVE_SPEED_DEG,
@@ -130,7 +130,7 @@ def depth_at_marker(T_m2c, depth_raw, scale, K):
     if not (5 <= ui < w - 5 and 5 <= vi < h - 5):
         return None
     win = depth_raw[vi-5:vi+6, ui-5:ui+6].astype(np.float32) * scale
-    win = win[(win > 0.15) & (win < 2.0)]  # 仅保留 Gemini 2 有效量程 [0.15, 2.0] m 内的点
+    win = win[(win > 0.07) & (win < 2.0)]  # 仅保留 Gemini 305 有效量程 [0.07, 2.0] m 内的点
     if len(win) < 10:
         return None
     return float(np.median(win))

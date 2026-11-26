@@ -620,53 +620,6 @@
       xyz="0 0 0" />
   </joint>
   <link
-    name="camera_mount">
-    <inertial>
-      <origin
-        xyz="0.001731 0.052732 -0.013517"
-        rpy="0 0 0" />
-      <mass
-        value="0.03967" />
-      <inertia
-        ixx="8.07031315e-06"
-        ixy="-3.62799170e-07"
-        ixz="-4.37368099e-07"
-        iyy="2.56189895e-05"
-        iyz="-4.09095455e-08"
-        izz="3.09320198e-05" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/visual/d435_gemini2_mount.STL" />
-      </geometry>
-      <material name="rs_cam_mount_black" />
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="../meshes/shared/d435_gemini2_mount.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="j_camera_mount"
-    type="fixed">
-    <origin
-      xyz="0 -0.00021 0.0799"
-      rpy="0 0 -1.5707963" />
-    <parent
-      link="link6" />
-    <child
-      link="camera_mount" />
-  </joint>
-  <link
     name="gripper_left">
     <inertial>
       <origin

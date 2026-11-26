@@ -19,7 +19,7 @@ for arg in "$@"; do
     --can0) SETUP_CAN0=1 ;;
     -h|--help)
       echo "用法: $0 [--no-can0]"
-      echo "  安装 Orbbec Gemini 2 udev 规则、配置 video/dialout 权限，并拉起 SocketCAN can0 (1Mbps)。"
+      echo "  安装 Orbbec Gemini 305 udev 规则、配置 video/dialout 权限，并拉起 SocketCAN can0 (1Mbps)。"
       echo "  --no-can0  跳过 SocketCAN can0 配置（例如暂未接 USB-CAN 适配器时）"
       exit 0
       ;;
@@ -66,7 +66,7 @@ fi
 echo ""
 echo "=================================================================="
 echo "  硬件权限安装完成！"
-echo "  1. 请【重新插拔】Orbbec Gemini 2 USB 3.0 线；"
+echo "  1. 请【重新插拔】Orbbec Gemini 305 USB 3.0 线；"
 echo "  2. 如首次加入 video/dialout 组，请【注销重新登录】生效；"
 echo "  3. 主机重启后如 can0 未自动拉起，重新执行 sudo ./tools/install_udev.sh 即可。"
 echo "=================================================================="

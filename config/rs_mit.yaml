@@ -94,12 +94,12 @@ mit_ext:
   vel_ff_watchdog_tau_s: 0.030
   vel_ff_lpf_tau_s: 0.008
 
-  # P3 M2：Pinocchio + 末端 Gemini 2 相机质点静态重力补偿 tau_ff（实机标定定稿）
+  # P3 M2：Pinocchio + 末端 Gemini 305 (68g) + 相机壳3.0 (~27g) 静态重力补偿 tau_ff
   gravity_ff_enable: true
   gravity_ff_scale: [0.0, 0.65, 0.80, 0.80, 0.0, 0.0]
   gravity_ff_max_nm: [0.0, 12.0, 12.0, 2.5, 2.0, 1.0]
-  gravity_payload_mass_kg: 0.32   # 腕部外挂 Gemini 2 相机 + 支架等效质量
-  gravity_payload_com_link6_m: [0.056, -0.011, 0.095]  # 质心在 link6 局部系坐标
+  gravity_payload_mass_kg: 0.095  # 腕部外挂 Gemini 305 (~68g) + 相机壳3.0 (~27g) 等效质量
+  gravity_payload_com_link6_m: [0.055, 0.000, 0.075]  # 0° 倾角前视质心在 link6 局部系坐标
   gravity_ff_ramp_in_s: 0.50
   gravity_ff_slew_nm_s: 30.0
 

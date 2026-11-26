@@ -2,7 +2,7 @@
 """
 手掌检测、跟踪与 3D 掌心/捏合提取模块（替代原项目 blue_circle_detection.py）
 ==========================================================================
-基于 MediaPipe Tasks API（``HandLandmarker``, ``VIDEO`` 运行模式）从 Gemini 2
+基于 MediaPipe Tasks API（``HandLandmarker``, ``VIDEO`` 运行模式）从 Gemini 305
 RGB-D 图像中实时提取掌心 2D 像素坐标、3D 相机系坐标及拇指-食指捏合距离。
 
 核心流水线与设计要点：
@@ -43,8 +43,8 @@ from servo_timing import compute_roi_box, remap_roi_landmarks
 # ── 配置 ──────────────────────────────────────────────────
 PALM_LANDMARK_ID = 9        # MediaPipe 21 点中的 9 号点（中指根部 MCP），作为掌心代表点
 PINCH_TIP_IDS = (4, 8)      # 捏合手势：拇指尖(4)—食指尖(8)，用于夹爪开合控制
-MIN_DEPTH_M = 0.15          # 深度有效下限（米）：Gemini 2 近距极限，小于此值的深度丢弃
-MAX_DEPTH_M = 1.50          # 深度有效上限（米）：跟随工作场景用不到更远距离，兼防背景误入
+MIN_DEPTH_M = 0.07          # 深度有效下限（米）：Gemini 305 理想近距下限 7cm
+MAX_DEPTH_M = 1.20          # 深度有效上限（米）：跟随工作场景用不到更远距离，兼防背景误入
 DEPTH_PATCH = 3             # 深度采样初始半窗口（像素），对应 (2*3+1)=7x7 窗口
 
 MAX_LOST_FRAMES = 8         # 短时丢失保持上限（帧）：与原项目一致，超限后清空轨迹

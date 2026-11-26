@@ -69,7 +69,9 @@ class V14ConfigTests(unittest.TestCase):
         cfg = load_v14_config(os.path.join(ROOT, "config", "v14.yaml"))
         self.assertEqual(cfg.safety.workspace_max_radius, 0.42)
         self.assertEqual(cfg.safety.max_vel, 0.85)
-        self.assertAlmostEqual(cfg.pbvs.distance, 0.40)
+        self.assertAlmostEqual(cfg.pbvs.distance, 0.35)
+        self.assertAlmostEqual(cfg.depth.min_valid_m, 0.07)
+        self.assertAlmostEqual(cfg.depth.max_valid_m, 1.20)
         self.assertAlmostEqual(cfg.estimator.pose_delay_s, 0.025)
         with self.assertRaises(Exception):
             cfg.pbvs.gain = 9.9  # frozen dataclass 禁止运行期篡改
@@ -82,8 +84,9 @@ class V14ConfigTests(unittest.TestCase):
             replace(base, safety=replace(base.safety, max_vel=0.86)),
             replace(base, safety=replace(base.safety, max_vel_joints=(2.5, 2.1, 2.0, 3.0, 3.0, 2.4))),
             replace(base, safety=replace(base.safety, max_vel_joints=(2.5, 2.0, 2.05, 3.0, 3.0, 2.4))),
-            replace(base, pbvs=replace(base.pbvs, distance=0.15)),
+            replace(base, pbvs=replace(base.pbvs, distance=0.08)),
             replace(base, pbvs=replace(base.pbvs, distance=0.65)),
+            replace(base, depth=replace(base.depth, min_valid_m=0.02)),
             replace(base, pbvs=replace(base.pbvs, gain=float("nan"))),
         ]
         for bad in bad_cases:
@@ -279,7 +282,7 @@ class WorldPBVSAndShieldTests(unittest.TestCase):
         cfg = V14Config()
         ctrl = WorldPBVSController(cfg.pbvs, cfg.safety, np.eye(4))
         ctrl.set_reference_orientation(np.eye(3))
-        p_target = np.array([0.20, 0.0, 0.70])
+        p_target = np.array([0.20, 0.0, 0.30 + cfg.pbvs.distance])
         tcp_p = np.array([0.20, 0.0, 0.30])
         # 模拟 J4 触限导致仰角倾斜 30°
         th = math.radians(30.0)
@@ -297,7 +300,7 @@ class WorldPBVSAndShieldTests(unittest.TestCase):
         ctrl = WorldPBVSController(cfg.pbvs, cfg.safety, np.eye(4))
         ctrl.set_reference_orientation(np.eye(3))
         tcp_p = np.array([0.20, 0.0, 0.30])
-        p_target = np.array([0.26, 0.0, 0.70])  # X 方向偏差 +6cm，速度为 0
+        p_target = np.array([0.26, 0.0, 0.30 + cfg.pbvs.distance])  # X 方向偏差 +6cm，速度为 0
         from servo_v14.types import TargetEstimate, FSMDecision
         est = TargetEstimate(True, True, True, False, p_target, np.zeros(3), p_target,
                              0.0, 0.0, 0.0, np.ones(3), tcp_p, np.eye(3))
@@ -485,8 +488,8 @@ class DigitalTwinAndEndToEndTests(unittest.TestCase):
         frame_counter = {"n": 0}
 
         class _FakeCam:
-            def __init__(self, fps=60, color_exposure_ms=6.0):
-                self.fx, self.fy, self.cx, self.cy = 518.0, 518.0, 320.0, 240.0
+            def __init__(self, width=848, height=480, fps=60, color_exposure_ms=6.0, force_zero_distortion=True):
+                self.fx, self.fy, self.cx, self.cy = 518.0, 518.0, 424.0, 240.0
                 self.depth_scale = 0.001
                 self.stopped = False
 
@@ -494,8 +497,8 @@ class DigitalTwinAndEndToEndTests(unittest.TestCase):
                 frame_counter["n"] += 1
                 if frame_counter["n"] > 25:
                     raise KeyboardInterrupt()
-                color = np.full((480, 640, 3), 120, dtype=np.uint8)
-                depth = np.full((480, 640), 400, dtype=np.uint16)  # 0.40m
+                color = np.full((480, 848, 3), 120, dtype=np.uint8)
+                depth = np.full((480, 848), 350, dtype=np.uint16)  # 0.35m
                 return color, depth, self.depth_scale
 
             def get_last_frame_timing(self):
@@ -505,13 +508,14 @@ class DigitalTwinAndEndToEndTests(unittest.TestCase):
                 self.stopped = True
 
         class _FakeDet:
-            def __init__(self, roi_enable=False, roi_scale=0.68):
+            def __init__(self, backend="auto", roi_enable=False, roi_scale=0.68):
+                self.backend = backend
                 self.roi_enable = roi_enable
                 self.roi_scale = roi_scale
                 self.closed = False
 
             def detect(self, color_bgr):
-                return 340, 240, fake_lms
+                return 424, 240, fake_lms
 
             def close(self):
                 self.closed = True
@@ -520,7 +524,7 @@ class DigitalTwinAndEndToEndTests(unittest.TestCase):
         os.makedirs(log_dir, exist_ok=True)
         before_logs = {n for n in os.listdir(log_dir) if n.startswith("servo_v14_") and n.endswith(".csv")}
 
-        with mock.patch.object(v14_mod, "Gemini2Camera", _FakeCam), \
+        with mock.patch.object(v14_mod, "Gemini305Camera", _FakeCam), \
              mock.patch.object(v14_mod, "PalmDetector", _FakeDet):
             rc = v14_mod.main(["--sim", "--headless", "--no-mujoco-sync"])
         self.assertEqual(rc, 0)

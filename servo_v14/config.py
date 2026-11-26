@@ -100,9 +100,9 @@ class FSMConfig:
 
 @dataclass(frozen=True)
 class PBVSConfig:
-    """层 3：统一世界系 PBVS 控制器配置。"""
+    """层 3：统一世界系 PBVS 控制器配置（Gemini 305 默认期望跟随距离 0.35m）。"""
 
-    distance: float = 0.40
+    distance: float = 0.35
     servo_direction: float = 1.0
     gain: float = 2.75
     gain_x: float = 2.20
@@ -166,10 +166,10 @@ class SafetyConfig:
 
 @dataclass(frozen=True)
 class DepthGuardConfig:
-    """4 层深度保护链配置。"""
+    """4 层深度保护链配置（适配 Orbbec Gemini 305：理想范围 0.07 ~ 0.50m，有效至 1.20m）。"""
 
-    min_valid_m: float = 0.15
-    max_valid_m: float = 1.50
+    min_valid_m: float = 0.07
+    max_valid_m: float = 1.20
     max_jump_m: float = 0.08
     max_rate_m: float = 0.05
     reacq_frames: int = 5
@@ -183,14 +183,18 @@ class DepthGuardConfig:
 
 @dataclass(frozen=True)
 class CameraConfig:
-    """相机与检测混合跟踪配置。"""
+    """Gemini 305 相机与检测混合跟踪配置。"""
 
+    width: int = 848
+    height: int = 480
     fps: int = 60
     color_exposure_ms: float = 6.0
+    force_zero_distortion: bool = True
     hw_timestamp_enable: bool = False
     hw_max_transport_s: float = 0.20
     roi_crop_enable: bool = True
     roi_crop_scale: float = 0.68
+    detector_backend: str = "auto"
     hybrid_track_enable: bool = True
     hybrid_max_frames: int = 15
     hybrid_box_half: int = 52
@@ -283,9 +287,9 @@ def validate_v14_config(cfg: V14Config) -> V14Config:
     _check_range(f.coast_window_s, 0.0, 0.50, "fsm.coast_window_s")
     _check_range(f.lost_hold_s, f.coast_window_s, 2.0, "fsm.lost_hold_s")
 
-    # 3. PBVS 控制器校验
+    # 3. PBVS 控制器校验（Gemini 305 支持近至 0.10m，默认 0.35m）
     p = cfg.pbvs
-    _check_range(p.distance, 0.18, 0.60, "pbvs.distance")
+    _check_range(p.distance, 0.10, 0.60, "pbvs.distance")
     if p.servo_direction not in (1.0, -1.0):
         raise ValueError("pbvs.servo_direction 必须为 1.0 或 -1.0")
     _check_range(p.gain, 0.1, 6.0, "pbvs.gain")
@@ -333,9 +337,9 @@ def validate_v14_config(cfg: V14Config) -> V14Config:
         if s.workspace_min[axis] >= s.workspace_max[axis]:
             raise ValueError(f"workspace_min[{axis}] 必须小于 workspace_max[{axis}]")
 
-    # 5. 深度保护链校验
+    # 5. 深度保护链校验（Gemini 305 支持 0.04m 起）
     d = cfg.depth
-    _check_range(d.min_valid_m, 0.05, 0.40, "depth.min_valid_m")
+    _check_range(d.min_valid_m, 0.04, 0.40, "depth.min_valid_m")
     _check_range(d.max_valid_m, d.min_valid_m + 0.20, 3.0, "depth.max_valid_m")
     _check_range(d.max_jump_m, 0.02, 0.30, "depth.max_jump_m")
     _check_range(d.max_rate_m, 0.01, 0.20, "depth.max_rate_m")
@@ -346,7 +350,11 @@ def validate_v14_config(cfg: V14Config) -> V14Config:
     c = cfg.camera
     if c.fps not in (15, 30, 60):
         raise ValueError(f"camera.fps={c.fps} 不在支持列表 (15, 30, 60)")
+    _check_range(float(c.width), 320.0, 1920.0, "camera.width")
+    _check_range(float(c.height), 240.0, 1200.0, "camera.height")
     _check_range(c.roi_crop_scale, 0.40, 0.90, "camera.roi_crop_scale")
+    if str(c.detector_backend).lower() not in ("auto", "cpu", "gpu"):
+        raise ValueError(f"camera.detector_backend={c.detector_backend!r} 必须为 auto/cpu/gpu")
 
     # 7. 数字孪生校验
     sim = cfg.sim

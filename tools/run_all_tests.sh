@@ -32,7 +32,7 @@ echo "[1/4] RobStride RS 底层控制 + P0~P4 + 配置红线与纯算法测试"
 "${CTRL_PY}" tools/test_rs_controller.py
 
 echo ""
-echo "[2/4] v14 四层架构 + Gemini 2 深度保护链 + 数字孪生 + UDP 桥测试"
+echo "[2/4] v14 四层架构 + Gemini 305 深度保护链 + 数字孪生 + UDP 桥测试"
 "${CTRL_PY}" tools/test_v14_architecture.py
 
 echo ""
@@ -59,7 +59,7 @@ fi
 
 echo ""
 if [[ -n "${MJ_PY}" ]]; then
-  echo "[4/4] MuJoCo B601-RS 双 URDF（柔性夹爪+支架 / 官方刚性）场景编译测试 (${MJ_PY})"
+  echo "[4/4] MuJoCo B601-RS + 相机壳3.0 STL + Gemini 305 双 URDF 场景编译测试 (${MJ_PY})"
   "${MJ_PY}" tools/test_mujoco_twin_rs.py
 else
   echo "[4/4] 跳过 MuJoCo 场景测试（未检测到 mujoco>=4.0.1；运行 ./tools/setup_env.sh --mujoco-only 可安装）"

@@ -126,7 +126,7 @@ class RSControllerConfigTests(unittest.TestCase):
         self.assertEqual(hw.motors[3].model, "rs-00")
         self.assertEqual(hw.motors[6].model, "rs-00")
         self.assertTrue(ext["enable"])
-        self.assertEqual(ext["gravity_payload_mass_kg"], 0.32)
+        self.assertEqual(ext["gravity_payload_mass_kg"], 0.095)
         self.assertEqual(ext["tau_limit_nm"], [18.0, 28.0, 28.0, 10.0, 10.0, 10.0])
 
     def test_reject_unsafe_rs_ext_configs(self) -> None:

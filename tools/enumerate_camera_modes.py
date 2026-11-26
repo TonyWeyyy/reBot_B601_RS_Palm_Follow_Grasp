@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""枚举 Orbbec Gemini 2 彩色/深度流支持的全部「分辨率 × 帧率 × 像素格式」组合。
+"""枚举 Orbbec Gemini 305 彩色/深度流支持的全部「分辨率 × 帧率 × 像素格式」组合。
 
 用途：
     确认相机在降低分辨率后是否开放 >60fps 档位（如 90fps）——
@@ -12,7 +12,7 @@
 
 输出：
     分别打印彩色流与深度流的全部可用档位，并用 `★ >60fps!` 标出高帧率模式。
-    若彩色流存在高帧率档位，可据此调整 gemini2_camera.py 中的流配置请求。
+    若彩色流存在高帧率档位，可据此调整 gemini305_camera.py 中的流配置请求。
 """
 
 import sys
@@ -82,12 +82,12 @@ def dump(name, sensor):
 
 
 def main():
-    """主入口：依次枚举 Gemini 2 的彩色流与深度流可用档位并输出配置建议。"""
-    print("枚举 Gemini 2 流档位（无需启动主程序）...")
+    """主入口：依次枚举 Gemini 305 的彩色流与深度流可用档位并输出配置建议。"""
+    print("枚举 Gemini 305 流档位（无需启动主程序）...")
     dump("彩色", OBSensorType.COLOR_SENSOR)
     dump("深度", OBSensorType.DEPTH_SENSOR)
     print("\n说明：彩色流是识别延迟与运动模糊的瓶颈；若彩色流有 >60fps")
-    print("档位（如 720p@90），把 gemini2_camera.py 里彩色 profile 请求")
+    print("档位（如 720p@90），把 gemini305_camera.py 里彩色 profile 请求")
     print("改成该分辨率+fps 即可享用（注意 USB 带宽与检测耗时也要跟上）。")
 
 

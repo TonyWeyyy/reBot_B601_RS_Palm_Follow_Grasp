@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Orbbec Gemini 2 相机内参/畸变模型裁决工具 —— 纯相机测试，不驱动机械臂。
+Orbbec Gemini 305 相机内参/畸变模型裁决工具 —— 纯相机测试，不驱动机械臂。
 ========================================================================
 背景与用途：
     当手眼标定诊断发现 PnP 重投影误差异常（例如高达 ~89 px，正常应 <2 px）时，
     说明「图像角点像素」与「内参矩阵 K + 畸变系数 dist」所描述的成像模型不自洽。
     特别地，Orbbec SDK v2 上报的畸变参数（k1/k2 等）不适用于 OpenCV Brown 模型，
-    项目最终结论是在 gemini2_camera.py 中强制 `dist_coeffs = np.zeros(5)`。
+    项目最终结论是在 gemini305_camera.py 中强制 `dist_coeffs = np.zeros(5)`。
 
     本脚本在同一帧最清晰的 ArUco 标记图像上，用 3 种内参/畸变假设分别运行
     cv2.solvePnP（IPPE_SQUARE），并与硬件 D2C 对齐后的深度图距离交叉验证：
@@ -32,7 +32,7 @@ import cv2
 # 项目根目录（tools/ 的上一级）加入模块搜索路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 
 # ArUco 标记字典与尺寸约定（单位：m）
 ARUCO_DICT = cv2.aruco.DICT_4X4_50
@@ -116,7 +116,7 @@ def main():
     cu, cv_ = img_pts.mean(axis=0).astype(int)
     h, w = depth_raw.shape
     win = depth_raw[max(0,cv_-6):cv_+7, max(0,cu-6):cu+7].astype(np.float32) * scale
-    win = win[(win > 0.15) & (win < 2.0)]  # 过滤无效零值及超出 Gemini 2 近距有效范围的点
+    win = win[(win > 0.07) & (win < 2.0)]  # 过滤无效零值及超出 Gemini 305 近距有效范围的点
     z_depth = float(np.median(win)) if len(win) > 10 else None
     print(f"深度图测得标记距离: {z_depth*1000:.0f} mm" if z_depth
           else "深度图该位置无有效值（太近/反光）")
@@ -151,7 +151,7 @@ def main():
         name, _, reproj, z_pnp = good[0]
         print(f"✓ 裁决结果：{name} 是正确配置（reproj={reproj:.2f}px, z={z_pnp*1000:.0f}mm）")
         if name.startswith("B"):
-            print("\n修复：gemini2_camera.py 中把 dist_coeffs 强制置零：")
+            print("\n修复：gemini305_camera.py 中把 dist_coeffs 强制置零：")
             print("  self.dist_coeffs = np.zeros(5, dtype=np.float32)")
         elif name.startswith("C"):
             print("\n修复：内参需按 1280 宽读取/缩放，把 camera_intrinsic_check 结果贴给我")

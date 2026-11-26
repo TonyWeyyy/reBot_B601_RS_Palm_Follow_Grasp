@@ -3,7 +3,7 @@
 手掌检测推理后端基准测试工具（MediaPipe Tasks HandLandmarker: CPU vs GPU）。
 
 用途：
-    使用 Orbbec Gemini 2 60fps 真实彩色画面，依次测评 PalmDetector 在
+    使用 Orbbec Gemini 305 60fps 真实彩色画面，依次测评 PalmDetector 在
     CPU 与 GPU 委托后端下的单帧推理耗时（平均 / 中位数 / P95，单位 ms），
     以实测数据决定主程序常驻的 `--detector-backend` 配置。
 
@@ -13,7 +13,7 @@
     python tools/benchmark_detector.py --headless # 预留无界面参数（不弹窗）
 
 注意：
-    本脚本会独占 Gemini 2 相机，运行前请先退出 palm_follow_v14.py；
+    本脚本会独占 Gemini 305 相机，运行前请先退出 palm_follow_v14.py；
     测试时建议将手掌置于镜头视野中，以测得含手掌关键点回归的真实耗时。
 """
 
@@ -27,7 +27,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from palm_detection import PalmDetector
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 
 
 def bench_backend(backend, cam, n_frames, headless):
@@ -82,7 +82,7 @@ def main():
     ap.add_argument("--headless", action="store_true")
     args = ap.parse_args()
 
-    # 按主程序一致的 60fps 档位打开相机（gemini2_camera 会自动切换 Binned Sparse 深度模式）
+    # 按主程序一致的 60fps 档位打开相机（Gemini 305 原生支持 60fps 彩色/深度流）
     cam = Gemini2Camera(fps=60)
     print("相机已就绪，请把手放到镜头前（检测有手时的耗时更真实）\n")
 

@@ -403,7 +403,7 @@ class SimPlugin(plugin.SimPlugin):
         return q, res_m * 1000.0, target_pos
 
     def _cam_to_world(self, data: mujoco.MjData, p_cam: list[float] | np.ndarray) -> np.ndarray:
-        cam_site = data.site("gemini2_cam")
+        cam_site = data.site("gemini305_cam")
         R_wc = cam_site.xmat.reshape(3, 3)
         p_wc = cam_site.xpos
         return p_wc + R_wc @ np.asarray(p_cam, dtype=np.float64)

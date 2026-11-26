@@ -6,8 +6,9 @@ Seeed reBot Arm B601-RS MuJoCo 4.0+ 数字孪生场景构建器（MjSpec）
 
   - 保留全部多材质视觉网格（`group=1`），将原始碰撞壳（`group=0`）移至 `group=3`
     （默认隐藏，避免遮挡精模，可在 Studio Geom Group 3 中按需打开检视）；
-  - 按 `config/hand_eye_calibration.json` 的真实手眼外参 `T_tcp_camera`，
-    在 `link6` 上精确挂载 Orbbec Gemini 2 相机视觉外壳、双目镜头与 0.40m 光轴瞄准线；
+  - 按 `config/hand_eye_calibration.json` 的手眼外参 `T_tcp_camera`，
+    在 `link6` 上精确挂载 3D 打印支架 `gemini305_mount_v3.stl`（由 `urdf/相机壳3.0.3MF` 无损转换）、
+    Orbbec Gemini 305 相机机身（42×42×23 mm）、18 mm 基线双目镜头与 0.35m 光轴瞄准线；
   - 挂载 3 个零物理开销的 mocap 叠加体：
       1. `palm_target`：实时 3D 手掌位置（翠绿发光球体）；
       2. `cmd_tcp_marker`：期望指令末端位姿 `q_cmd` 幽灵标记（青色半透明球）；
@@ -32,11 +33,25 @@ LOCAL_STANDARD_URDF = str(PROJECT_ROOT / "urdf" / "Rebot_B601_RS" / "urdf" / "Re
 LOCAL_SOFT_GRIPPER_URDF = str(
     PROJECT_ROOT / "urdf" / "Rebot_B601_RS" / "urdf" / "ReBot_Arm_RS_soft_gripper_cam.urdf"
 )
+BRACKET_STL_PATH = str(
+    PROJECT_ROOT / "urdf" / "Rebot_B601_RS" / "meshes" / "visual" / "gemini305_mount_v3.stl"
+)
 URDF_PATH = LOCAL_STANDARD_URDF
 URDF_VARIANTS = ("soft_gripper", "standard")
 DEFAULT_HOME_Q = np.array([-0.4313, 0.3445, 0.3691, 0.0938, 0.0018, -0.0015], dtype=np.float64)
 ARM_JOINT_NAMES = ("joint1", "joint2", "joint3", "joint4", "joint5", "joint6")
 GRIPPER_JOINT_NAMES = ("gripper_joint1", "gripper_joint2")
+
+# 0° 倾角前视名义外参（camera +Z 沿 link6 +Z 朝前，+X 朝右，+Y 朝下，安装于手腕上方）
+DEFAULT_T_TCP_CAM = np.array(
+    [
+        [0.0, -1.0, 0.0, 0.055],
+        [1.0, 0.0, 0.0, 0.000],
+        [0.0, 0.0, 1.0, 0.075],
+        [0.0, 0.0, 0.0, 1.000],
+    ],
+    dtype=np.float64,
+)
 
 
 def resolve_urdf_path(
@@ -93,7 +108,7 @@ def load_hand_eye_matrix() -> np.ndarray:
                 return T
         except Exception:
             pass
-    return np.eye(4, dtype=np.float64)
+    return DEFAULT_T_TCP_CAM.copy()
 
 
 def _rotmat_to_quat_wxyz(R: np.ndarray) -> list[float]:
@@ -149,7 +164,7 @@ def build_b601_spec(
     urdf_path: str | None = None,
     urdf_variant: str = "soft_gripper",
     workspace_radius_m: float = 0.42,
-    target_distance_m: float = 0.40,
+    target_distance_m: float = 0.35,
     show_camera_ray: bool = True,
     home_q_sdk: Sequence[float] | None = None,
     joint_offset_rad: Sequence[float] | None = None,
@@ -208,6 +223,11 @@ def build_b601_spec(
     )
     floor_mat.textures[mujoco.mjtTextureRole.mjTEXROLE_RGB] = "workbench_checker"
 
+    # 若转换后的相机壳 3.0 STL 存在，注册为 mesh 资产
+    has_bracket_mesh = os.path.isfile(BRACKET_STL_PATH)
+    if has_bracket_mesh:
+        spec.add_mesh(name="gemini305_mount_v3_mesh", file=BRACKET_STL_PATH)
+
     # 分离视觉精模（group=1）与碰撞壳（移至 group=3 默认隐藏，彻底消除 Z-fighting）
     for geom in spec.geoms:
         if geom.group == 0:
@@ -246,7 +266,7 @@ def build_b601_spec(
         conaffinity=0,
     )
 
-    # 在 link6 上按标定外参 T_tcp_camera 精确安装 Orbbec Gemini 2 相机视觉组件与光轴瞄准线
+    # 在 link6 上按手眼外参 T_tcp_camera 精确安装 Orbbec Gemini 305 + 相机壳 3.0
     T_cam = load_hand_eye_matrix() if T_tcp_camera is None else np.asarray(T_tcp_camera, dtype=np.float64)
     cam_pos = T_cam[:3, 3].tolist()
     cam_quat = _rotmat_to_quat_wxyz(T_cam[:3, :3])
@@ -260,45 +280,71 @@ def build_b601_spec(
             group=2,
         )
         cam_body = link6_body.add_body(
-            name="gemini2_camera_body",
+            name="gemini305_camera_body",
             pos=cam_pos,
             quat=cam_quat,
         )
         # 相机光学中心 site（+Z 为相机光轴，供回放模式把 p_cam 反投影到世界系）
         cam_body.add_site(
-            name="gemini2_cam",
+            name="gemini305_cam",
             pos=[0.0, 0.0, 0.0],
             size=[0.006, 0.006, 0.006],
             rgba=[0.1, 0.85, 1.0, 0.9],
             group=2,
         )
-        # Gemini 2 铝壳机身（尺寸约 90×25×25 mm）
+        # 3D 打印外壳（urdf/相机壳3.0.3MF：内腔 42×42×26mm，Y 负侧为底部安装槽；相机系 +Y 朝下，
+        # 因此绕 Z 轴转 180° 使安装槽朝 +Y 下方贴合夹爪，Z 偏移 -0.025m 包裹机身）
+        if has_bracket_mesh:
+            cam_body.add_geom(
+                name="gemini305_mount_v3",
+                type=mujoco.mjtGeom.mjGEOM_MESH,
+                meshname="gemini305_mount_v3_mesh",
+                pos=[0.0, 0.0, -0.025],
+                quat=[0.0, 0.0, 0.0, 1.0],
+                rgba=[0.18, 0.20, 0.22, 1.0],
+                group=1,
+                contype=0,
+                conaffinity=0,
+            )
+        # Orbbec Gemini 305 超紧凑机身（42 × 42 × 23 mm -> 半尺寸 0.021 × 0.021 × 0.0115 m）
         cam_body.add_geom(
-            name="gemini2_housing",
+            name="gemini305_housing",
             type=mujoco.mjtGeom.mjGEOM_BOX,
-            pos=[0.0, 0.0, -0.014],
-            size=[0.045, 0.0125, 0.0125],
-            rgba=[0.11, 0.13, 0.15, 1.0],
+            pos=[0.0, 0.0, -0.0115],
+            size=[0.021, 0.021, 0.0115],
+            rgba=[0.09, 0.11, 0.13, 1.0],
             group=1,
             contype=0,
             conaffinity=0,
         )
-        # 前置深色玻璃面板
+        # 前置深色双目玻璃面板
         cam_body.add_geom(
-            name="gemini2_visor",
+            name="gemini305_visor",
             type=mujoco.mjtGeom.mjGEOM_BOX,
-            pos=[0.0, 0.0, -0.001],
-            size=[0.042, 0.010, 0.002],
+            pos=[0.0, 0.0, -0.0005],
+            size=[0.019, 0.019, 0.0012],
             rgba=[0.02, 0.03, 0.04, 1.0],
             group=1,
             contype=0,
             conaffinity=0,
         )
-        # 0.40m 光轴期望跟随距离瞄准线与停靠目标点
+        # 双目镜头（基线 18 mm -> ±9 mm）
+        for side, lx in (("left", -0.009), ("right", 0.009)):
+            cam_body.add_geom(
+                name=f"gemini305_lens_{side}",
+                type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+                pos=[lx, 0.0, 0.0008],
+                size=[0.0042, 0.0012, 0.0],
+                rgba=[0.08, 0.25, 0.38, 1.0],
+                group=1,
+                contype=0,
+                conaffinity=0,
+            )
+        # 0.35m 光轴期望跟随距离瞄准线与停靠目标点
         if show_camera_ray:
             ray_len = max(0.05, float(target_distance_m))
             cam_body.add_geom(
-                name="gemini2_aim_ray",
+                name="gemini305_aim_ray",
                 type=mujoco.mjtGeom.mjGEOM_CYLINDER,
                 pos=[0.0, 0.0, 0.5 * ray_len],
                 size=[0.0018, 0.5 * ray_len, 0.0],
@@ -308,7 +354,7 @@ def build_b601_spec(
                 conaffinity=0,
             )
             cam_body.add_geom(
-                name="gemini2_aim_tip",
+                name="gemini305_aim_tip",
                 type=mujoco.mjtGeom.mjGEOM_SPHERE,
                 pos=[0.0, 0.0, ray_len],
                 size=[0.010, 0.0, 0.0],

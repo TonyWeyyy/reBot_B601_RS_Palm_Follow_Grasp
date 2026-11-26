@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-手眼外参 + 6 关节零位偏置 联合标定工具（reBot Arm B601-RS + Orbbec Gemini 2）。
+手眼外参 + 6 关节零位偏置 联合标定工具（reBot Arm B601-RS + Orbbec Gemini 305）。
 ===============================================================================
 背景与设计动机：
     体检诊断显示：旋转链一致（SDK 关节角增减与实际旋转 1:1 吻合），但 FK 平移
@@ -44,7 +44,7 @@ import cv2
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 from rebot_adapter import RebotAdapter, URDF_PATH, B601_RS_JOINT_NAMES
 from hand_eye_calibration_auto import ArucoTracker, VIEWPOINT_FILE
 

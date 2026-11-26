@@ -45,7 +45,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera
 from palm_detection import (
     LKPalmBridge,
     OneEuroFilter,
@@ -151,6 +151,11 @@ def load_hand_eye_matrix() -> np.ndarray:
     T = np.asarray(raw["T_tcp_camera"], dtype=np.float64)
     if T.shape != (4, 4) or not np.all(np.isfinite(T)):
         raise ValueError("hand_eye_calibration.json 中 T_tcp_camera 矩阵格式无效")
+    if raw.get("calibrated") is False:
+        print(
+            "[标定提示] 当前 hand_eye_calibration.json 为 Gemini 305 + 相机壳3.0 理论 0° 倾角名义外参，"
+            "真机跟随前请运行 tools/handeye_joint_calib.py 完成实机手眼标定！"
+        )
     return T
 
 
@@ -172,11 +177,17 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--no-follow", action="store_true", help="仅启用夹爪捏合，禁用手臂跟随")
     p.add_argument("--no-gripper", action="store_true", help="仅启用跟随（启动主动打开夹爪防遮挡）")
     p.add_argument("--headless", action="store_true", help="无 OpenCV 窗口模式")
-    p.add_argument("--distance", type=float, default=None, help="覆盖期望跟随距离 (m)")
+    p.add_argument("--distance", type=float, default=None, help="覆盖期望跟随距离 (m，默认 0.35)")
     p.add_argument("--gain", type=float, default=None, help="覆盖竖直/深度增益")
     p.add_argument("--gain-x", type=float, default=None, help="覆盖水平偏航增益")
     p.add_argument("--max-vel", type=float, default=None, help="覆盖最大末端线速度 (m/s, ≤0.85)")
     p.add_argument("--fps", type=int, default=None, help="覆盖相机帧率 (15/30/60)")
+    p.add_argument(
+        "--detector-backend",
+        choices=("auto", "cpu", "gpu"),
+        default=None,
+        help="覆盖 MediaPipe 推理后端（auto/cpu/gpu）",
+    )
     p.add_argument("--no-mujoco-sync", action="store_true",
                    help="关闭向 MuJoCo Studio 数字孪生的本机 UDP 实时状态同步")
     p.add_argument("--mujoco-port", type=int, default=DEFAULT_MUJOCO_PORT,
@@ -199,6 +210,8 @@ def apply_cli_overrides(cfg: V14Config, args: argparse.Namespace) -> V14Config:
         safety = replace(safety, max_vel=args.max_vel)
     if args.fps is not None:
         cam = replace(cam, fps=args.fps)
+    if getattr(args, "detector_backend", None) is not None:
+        cam = replace(cam, detector_backend=str(args.detector_backend).lower())
     return validate_v14_config(replace(cfg, pbvs=pbvs, safety=safety, camera=cam))
 
 
@@ -211,20 +224,23 @@ def main(argv=None) -> int:
     enable_follow = (not args.no_arm) and (not args.no_follow)
     enable_gripper = (not args.no_arm) and (not args.no_gripper) and gripper_mapper.enabled
 
-    print("=" * 64)
-    print("reBot Arm B601-RS 手掌跟随 + 捏合抓取 [v14.0 四层解耦架构]")
-    print("=" * 64)
+    print("=" * 68)
+    print("reBot Arm B601-RS + Orbbec Gemini 305 手掌跟随与捏合抓取 [v14.0]")
+    print("=" * 68)
     mode_tag = "SIM数字孪生" if args.sim else ("纯视觉" if args.no_arm else "真机MIT")
     print(f"后端: {mode_tag} | follow={'ON' if enable_follow else 'OFF'} "
           f"| gripper={'ON' if enable_gripper else 'OFF'} | fps={cfg.camera.fps}")
-    print(f"参数: distance={cfg.pbvs.distance:.2f}m gain={cfg.pbvs.gain:.2f}/{cfg.pbvs.gain_x:.2f} "
-          f"max_vel={cfg.safety.max_vel:.2f}m/s max_r={cfg.safety.workspace_max_radius:.2f}m")
+    print(
+        f"参数: distance={cfg.pbvs.distance:.2f}m gain={cfg.pbvs.gain:.2f}/{cfg.pbvs.gain_x:.2f} "
+        f"max_vel={cfg.safety.max_vel:.2f}m/s max_r={cfg.safety.workspace_max_radius:.2f}m "
+        f"depth=[{cfg.depth.min_valid_m:.2f},{cfg.depth.max_valid_m:.2f}]m"
+    )
     print("操作: g/空格 启停跟随 | q/Esc/Ctrl+C 统一安全退出并回零")
-    print("=" * 64)
+    print("=" * 68)
 
     backend: Optional[RobotBackend] = None
     pipeline: Optional[ServoV14Pipeline] = None
-    camera: Optional[Gemini2Camera] = None
+    camera: Optional[Gemini305Camera] = None
     detector: Optional[PalmDetector] = None
     diag: Optional[DiagnosticRecorder] = None
     mj_pub: Optional[MuJoCoTwinPublisher] = None
@@ -309,11 +325,15 @@ def main(argv=None) -> int:
                 print(f"[MuJoCo] 实时数字孪生同步已就绪 -> udp://127.0.0.1:{args.mujoco_port}")
 
         # ── 2. 初始化相机与视觉组件 ──────────────────────────────
-        camera = Gemini2Camera(
+        camera = Gemini305Camera(
+            width=cfg.camera.width,
+            height=cfg.camera.height,
             fps=cfg.camera.fps,
             color_exposure_ms=cfg.camera.color_exposure_ms,
+            force_zero_distortion=cfg.camera.force_zero_distortion,
         )
         detector = PalmDetector(
+            backend=cfg.camera.detector_backend,
             roi_enable=cfg.camera.roi_crop_enable,
             roi_scale=cfg.camera.roi_crop_scale,
         )

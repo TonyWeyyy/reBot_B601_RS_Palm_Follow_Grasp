@@ -13,7 +13,7 @@ reBot Arm B601-RS 机械臂适配层（运动下发 + 夹爪封装 + Pinocchio �
      仅注入 Pinocchio 广义坐标（FK/雅可比/重力），绝不改写下发给电机的目标角；
   3. Pinocchio 双模型线程隔离：主模型 ``self.model / self.data`` 供 100Hz 伺服线程及标定脚本；
      独立重力模型 ``self._grav_model / self._grav_data`` + ``self._grav_lock`` 专供 200Hz MIT
-     线程计算静重力前馈，按 ``config/rs_mit.yaml`` 挂载腕部 Gemini 2 + 支架质点（0.32 kg）；
+     线程计算静重力前馈，按 ``config/rs_mit.yaml`` 挂载腕部 Gemini 305 + 相机壳 3.0 质点（0.095 kg）；
   4. 安全停机红线：``stop()`` 强制走 ``return_to_zero=True, wait=True``（缓慢回零到位后失能）。
 """
 
@@ -141,7 +141,7 @@ class RebotAdapter:
         self.joint_names = list(joint_names)
         self.motor_count = 6
 
-        # 独立 Pinocchio 重力模型（线程安全隔离，挂载 0.32 kg Gemini 2 + 支架质点）
+        # 独立 Pinocchio 重力模型（线程安全隔离，挂载 0.095 kg Gemini 305 + 相机壳 3.0 质点）
         self._grav_lock = threading.Lock()
         self._grav_model = pin.buildModelFromUrdf(urdf_abs)
         ext_cfg = getattr(self.io, "ext_cfg", {}) or {}

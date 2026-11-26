@@ -121,7 +121,7 @@ def main():
         robot.set_reach_radius(tcp_r)
         time.sleep(0.6)
 
-        # 读取静态指令角与裸 URDF / 含 Gemini 2 相机负载两套 Pinocchio 重力矩预测值作对照
+        # 读取静态指令角与裸 URDF / 含 Gemini 305 + 相机壳 3.0 负载两套 Pinocchio 重力矩预测值作对照
         q_cmd = robot.get_command_pos()
         tau_urdf = robot.gravity_torque(q_target, include_payload=False)
         tau_full = robot.gravity_torque(q_target, include_payload=True)

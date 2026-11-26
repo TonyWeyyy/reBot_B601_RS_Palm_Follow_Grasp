@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Seeed reBot Arm B601-RS + Orbbec Gemini 2 项目环境与静态资产自检工具
-====================================================================
+Seeed reBot Arm B601-RS + Orbbec Gemini 305 项目环境与静态资产自检工具
+======================================================================
 可在任意拷贝后的项目目录内运行，逐项核查：
   1. Python 版本与 ROS 环境变量冲突；
   2. 全部主控 Python 依赖（numpy / yaml / cv2+aruco / scipy / pynput /
      mediapipe / pinocchio / motorbridge / pyorbbecsdk）；
-  3. 项目内置全部静态资产（官方刚性 RS URDF、柔性夹爪+支架 RS URDF、STEP 源文件、
-     MediaPipe 模型、配置文件与已标定产物、内置 SDK wheel 与 Orbbec udev 规则）；
+  3. 项目内置全部静态资产（官方刚性 RS URDF、柔性夹爪 RS URDF、相机壳3.0.3MF / STL、
+     柔性夹爪 STEP、MediaPipe 模型、配置文件与标定产物、内置 SDK wheel 与 Orbbec udev 规则）；
   4. MuJoCo Studio 4.0+ 数字孪生 Python 环境（优先检查项目内 .venv_mujoco）；
   5. Linux 硬件权限与外设就绪度（SocketCAN can0 / Orbbec USB，仅提示不判失败）。
 """
@@ -77,7 +77,7 @@ def _find_mujoco_python() -> Path | None:
 def main() -> int:
     failures = 0
     print("=" * 72)
-    print("  reBot Arm B601-RS + Gemini 2 独立项目环境自检")
+    print("  reBot Arm B601-RS + Gemini 305 独立项目环境自检")
     print(f"  项目路径: {PROJECT_ROOT}")
     print(f"  Python  : {sys.executable} ({sys.version.split()[0]})")
     print("=" * 72)
@@ -138,7 +138,8 @@ def main() -> int:
     required_files = [
         "urdf/Rebot_B601_RS/urdf/ReBot_Arm_RS.urdf",
         "urdf/Rebot_B601_RS/urdf/ReBot_Arm_RS_soft_gripper_cam.urdf",
-        "urdf/D435_Gemini2_Mount_v1.step",
+        "urdf/Rebot_B601_RS/meshes/visual/gemini305_mount_v3.stl",
+        "urdf/相机壳3.0.3MF",
         "urdf/Soft_Gripper_Finger.step",
         "urdf/Soft_Gripper_Mount.step",
         "config/hand_landmarker.task",

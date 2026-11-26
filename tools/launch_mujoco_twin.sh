@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 一键启动 Seeed reBot Arm B601-RS + Gemini 2 MuJoCo Studio 3D 实时数字孪生
+# 一键启动 Seeed reBot Arm B601-RS + Gemini 305 MuJoCo Studio 3D 实时数字孪生
 #
 # 用法：
 #   ./tools/launch_mujoco_twin.sh --native                           # 本地原生桌面 3D 窗口（默认柔性夹爪+支架 URDF）

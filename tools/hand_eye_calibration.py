@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Eye-in-Hand 棋盘格手动微动标定工具（reBot Arm B601-RS + Orbbec Gemini 2）。
+Eye-in-Hand 棋盘格手动微动标定工具（reBot Arm B601-RS + Orbbec Gemini 305）。
 ========================================================================
 用途：
     移植自原项目 9_hand_eye_calibration.py。因 B601-RS 底层未提供手动拖动示教，
@@ -40,7 +40,7 @@ from pynput import keyboard as pynput_kb
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 from rebot_adapter import RebotAdapter
 
 OUT_CAL_FILE = os.path.join(_ROOT, "config", "hand_eye_calibration.json")
@@ -255,7 +255,7 @@ def main():
     global first_corner_position, robot_poses, camera_poses
 
     print("=" * 60)
-    print("Eye-in-Hand 手眼标定 (B601 RS + Gemini 2)")
+    print("Eye-in-Hand 手眼标定 (B601 RS + Gemini 305)")
     print("=" * 60)
 
     cam = Gemini2Camera()
@@ -378,7 +378,7 @@ def main():
                         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
                         'num_samples': len(robot_poses),
                         'arm': 'reBot Arm B601-RS',
-                        'camera': 'Orbbec Gemini 2',
+                        'camera': 'Orbbec Gemini 305',
                     }
                     with open(OUT_CAL_FILE, 'w') as f:
                         json.dump(result, f, indent=2)

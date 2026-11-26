@@ -60,7 +60,7 @@ v14:
 
   # ─── 层 3：统一世界系 PBVS 控制器 ────────────────────────────
   pbvs:
-    distance: 0.40                  # 期望相机光轴到掌心距离 (m) [0.18, 0.60]
+    distance: 0.35                  # Orbbec Gemini 305 期望跟随距离 (m) [0.10, 0.60]
     servo_direction: 1.0            # 伺服方向系数（1.0 或 -1.0）
     gain: 2.75                      # 竖直/深度方向位置增益 (1/s)
     gain_x: 2.20                    # 水平偏航方向位置增益 (1/s)
@@ -122,10 +122,10 @@ v14:
     workspace_max: [ 0.40,  0.40, 0.60]
     workspace_max_radius: 0.42      # 70% 臂展水平径向硬红线 (m，≤ 0.42)
 
-  # ─── 4 层深度保护链 ──────────────────────────────────────────
+  # ─── 4 层深度保护链（适配 Gemini 305 0.07 ~ 1.20m 近距优势）───
   depth:
-    min_valid_m: 0.15               # Gemini 2 近距盲区下限 (m)
-    max_valid_m: 1.50               # 有效手部深度上限 (m)
+    min_valid_m: 0.07               # Gemini 305 理想近距下限 7cm（工作下限 4cm）
+    max_valid_m: 1.20               # 有效手部深度上限 (m)
     max_jump_m: 0.08                # 第 2 层：帧间最大合法深度跳变 (m)
     max_rate_m: 0.05                # 第 4 层：单帧深度变化率限幅 (m/frame)
     reacq_frames: 5                 # 第 3 层：长丢失后连续一致恢复帧数
@@ -136,14 +136,18 @@ v14:
     oe_min_cutoff: 0.85             # 深度 One Euro 最小截止频率 (Hz)
     oe_beta: 0.45                   # 深度 One Euro 速度自适应系数
 
-  # ─── 相机、检测与诊断 ────────────────────────────────────────
+  # ─── Orbbec Gemini 305 相机、检测与诊断 ──────────────────────
   camera:
+    width: 848
+    height: 480
     fps: 60
     color_exposure_ms: 6.0
+    force_zero_distortion: true
     hw_timestamp_enable: false
     hw_max_transport_s: 0.20
     roi_crop_enable: true
     roi_crop_scale: 0.68
+    detector_backend: "auto"        # "auto"（桌面优先 GPU）/ "cpu" / "gpu"
     hybrid_track_enable: true
     hybrid_max_frames: 15
     hybrid_box_half: 52

@@ -16,7 +16,7 @@ reBot Arm B601-RS 底层实时控制器（RobStride RS06 + RS00 / motorbridge）
    - FOH 向后插值消除 100Hz→200Hz 阶梯纹波且绝不越过目标/软限位；
    - 硬隔离：J7 夹爪（索引 6）以及 ``set_joint_angles()`` / ``hold()`` / 回零路径恒强制 ``dq_des = 0``。
 3. **P3 · 静态重力前馈 ``tau_ff``（``compute_p3_gravity_tau``）与伸展自适应阻尼（``compute_p3_gains``）**：
-   - 由 ``RebotAdapter`` 注入线程隔离 Pinocchio 重力回调（含 0.32 kg Gemini 2 相机载荷）；
+   - 由 ``RebotAdapter`` 注入线程隔离 Pinocchio 重力回调（含 0.095 kg Gemini 305 + 相机壳 3.0 载荷）；
    - 0.5s 淡入、30 Nm/s 斜率限幅、双重硬封顶、J1/J7 恒为 0、回零近零位支架平滑淡出（``cradle_zero_fade``）；
    - 基于水平伸展半径 ``reach_r`` 平滑调度 J1~J3 阻尼 ``kd``，抑制悬臂长伸展共振。
 4. **P4 · M6 200Hz 主动安全监督（``SafetySupervisor``）与三级过温保护**：
@@ -147,8 +147,8 @@ DEFAULT_RS_MIT_EXT_CFG: dict[str, Any] = {
     "gravity_ff_enable": True,
     "gravity_ff_scale": [0.0, 0.65, 0.80, 0.80, 0.0, 0.0],
     "gravity_ff_max_nm": [0.0, 12.0, 12.0, 2.5, 2.0, 1.0],
-    "gravity_payload_mass_kg": 0.32,
-    "gravity_payload_com_link6_m": [0.056, -0.011, 0.095],
+    "gravity_payload_mass_kg": 0.095,
+    "gravity_payload_com_link6_m": [0.055, 0.000, 0.075],
     "gravity_ff_ramp_in_s": 0.50,
     "gravity_ff_slew_nm_s": 30.0,
     # P3 M3

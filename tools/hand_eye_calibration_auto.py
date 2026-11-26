@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-自动 Eye-in-Hand 手眼标定 v3（reBot Arm B601-RS + Orbbec Gemini 2）——
+自动 Eye-in-Hand 手眼标定 v3（reBot Arm B601-RS + Orbbec Gemini 305）——
 单点示教 + 关节空间自动扰动 + 在线共轭角一致性守卫。
 ========================================================================
 ★ 为什么放弃官方 50 个预设笛卡尔位姿：
@@ -48,7 +48,7 @@ from pynput import keyboard as pynput_kb
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)
 
-from gemini2_camera import Gemini2Camera
+from gemini305_camera import Gemini305Camera as Gemini2Camera
 from rebot_adapter import RebotAdapter
 from hand_eye_solver import calibrate_hand_eye   # OpenCV 5.0 移除了
                                                   # cv2.calibrateHandEye，用自实现兜底
@@ -492,7 +492,7 @@ def solve_and_report(robot_poses, camera_poses):
         'num_samples': n,
         'residual_spread_cm': round(float(spread), 2),
         'arm': 'reBot Arm B601-RS',
-        'camera': 'Orbbec Gemini 2',
+        'camera': 'Orbbec Gemini 305',
         'method': f'teach_viewpoint_joint_perturb_{method}',
     }
     with open(OUT_CAL_FILE, 'w') as f:
